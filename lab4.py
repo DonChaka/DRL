@@ -54,14 +54,14 @@ class ReplayBuffer(object):
         return self.mem_cntr-1 <= batch_size
 
 
-class DQNAgent:  # Pytorch
+class DQNAgent: # Pytorch
     def __init__(self, action_size, state_size, learning_rate, model):
         self.action_size = action_size
         self.memory = ReplayBuffer(1000, state_size)
-        self.gamma = 0.95
-        self.epsilon = 1.0
+        self.gamma = 0.95    # discount rate
+        self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.05
+        self.epsilon_decay = 0.95
         self.learning_rate = learning_rate
         self.q = model
         self.evaluate = False
@@ -87,35 +87,35 @@ class DQNAgent:  # Pytorch
         return action
 
     def learn(self, batch_size):
-        if self.memory.ready(batch_size):
+        if self.memory.mem_cntr < batch_size:
             return
 
-        states, actions, rewards, _states, dones = self.memory.sample_buffer(batch_size)
-
-        # if 1 in rewards or -1 in rewards:
-        #     test = 1
+        states, actions, rewards, _states, done = self.memory.sample_buffer(batch_size)
 
         states = T.tensor(states).to(self.q.device)
         _states = T.tensor(_states).to(self.q.device)
+
 
         q_next = self.q(_states).cpu().detach().numpy()
         q_pred = self.q(states)
         q_target = q_pred.cpu().detach().numpy().copy()
 
-        max_actions = np.argmax(q_target, axis=1)
+        max_actions = np.argmax(q_next, axis=1)
 
         batch_index = np.arange(batch_size, dtype=np.int32)
 
-        q_target[batch_index, actions] = rewards + self.gamma * q_next[batch_index, max_actions] * (1 - dones)
+        q_target[batch_index, actions] = rewards + self.gamma * q_next[batch_index, max_actions] * (1-done)
         q_target = T.tensor(q_target).to(self.q.device)
+
         # q_pred = T.tensor(q_pred, requires_grad=True).to(self.q.device)
 
+        self.q.optimizer.zero_grad()
         loss = self.q.loss(q_pred, q_target).to(self.q.device)
         loss.backward()
         self.q.optimizer.step()
 
     def update_epsilon_value(self):
-        self.epsilon = self.epsilon - self.epsilon_decay if self.epsilon > self.epsilon_min else self.epsilon_min
+        self.epsilon = self.epsilon * self.epsilon_decay if self.epsilon > self.epsilon_min else self.epsilon_min
 
 
 class DQN(nn.Module):
