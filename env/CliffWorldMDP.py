@@ -37,7 +37,7 @@ class CliffWorld:
         """ return a list of all possible states """
         return self._states
 
-    def is_terminal(self, state):
+    def is_terminal(self, state): 
         """ return true if state is terminal or false otherwise """
         x, y = self.__state_to_xy(state)
         if MAP[y][x] in ['G', 'H']:
