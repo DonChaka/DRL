@@ -33,15 +33,15 @@ test_episodes_per_epoch = 100
 
 # Other parameters
 frame_repeat = 4
-resolution = (1, 256, 192)
+# resolution = (1, 256, 192)
+resolution = (1, 160, 120)
 episodes_to_watch = 10
 
-save_model = True
+save_model = False
 pretrain_on_data = False
-load_model = False
+load_model = True
 skip_learning = False
-train = True
-
+train = False
 
 game = vzd.DoomGame()
 # Use CIG example config or your own.
@@ -79,8 +79,9 @@ game.add_game_args("+name AI +colorset 0")
 # game.set_mode(vzd.Mode.ASYNC_SPECTATOR)
 # game.set_mode(vzd.Mode.SPECTATOR)
 game.set_mode(vzd.Mode.PLAYER)
-game.set_window_visible(False)
-game.set_doom_map('map03')
+# game.set_window_visible(False)
+# game.set_doom_map('map03')
+game.set_doom_map("map01")
 game.set_ticrate(35)
 game.set_console_enabled(True)
 game.init()
@@ -95,7 +96,7 @@ episodes = 25_000
 
 ### DEFINE YOUR AGENT HERE (or init)
 
-agent = Agent(input_dims=(1, resolution[1], resolution[2] * 3), n_actions=2**7, learning_rate=0.0001)
+agent = Agent(input_dims=(1, resolution[1], resolution[2] * 3), n_actions=2 ** 7, learning_rate=0.0001)
 
 if pretrain_on_data:
     with open("./full_memory_buffer", "rb") as f:
@@ -117,9 +118,7 @@ armor_change_reward = [0, 0.02, -0.01]
 frag_count_reward = [0, 1, 0]
 
 actions = []
-for i in range(2**7):
-    actions.append(np.array(list(f"{i:07b}")))
-actions = np.array(actions, dtype=int)
+n_actions = 7
 
 
 def calculate_reward(reward, vars, _vars, done):
@@ -134,8 +133,9 @@ def calculate_reward(reward, vars, _vars, done):
     return reward
 
 
-for i in range(episodes):
-    print("Episode #" + str(i + 1))
+for i in tqdm(range(episodes)):
+    time = datetime.now().strftime("%H:%M")
+    print("Episode #" + str(i + 1) + "Time is " + time)
     state_stack = StateWrapper(resolution, game.get_state().game_variables.shape)
     state_stack(game.get_state().screen_buffer, game.get_state().game_variables)
 
@@ -146,7 +146,7 @@ for i in range(episodes):
 
         agent.save_model(f"./tmp/ddql/{current_time}")
         # agent.save_model(f"models/{int(time())}")
-        # agent.save_model()
+        # agent.save_model()`
 
     game.send_game_command("removebots")
     for _ in range(bots):
@@ -156,15 +156,17 @@ for i in range(episodes):
     # Valid args: 1, 2, 3, 4, 5 (1 - easy, 5 - very hard)
     game.send_game_command("pukename change_difficulty 1")
 
-    progress_bar = tqdm(unit=" iteration", unit_scale=True, desc=f'Episode #{i + 1}')
+    # progress_bar = tqdm(unit=" iteration", unit_scale=True, desc=f'Episode #{i + 1}')
 
     # Play until the game (episode) is over.
     while not game.is_episode_finished():
-        progress_bar.update(1)
+        # progress_bar.update(1)
 
         state, variables = state_stack()
         action = agent.choose_action(state, variables)
-        reward = game.make_action(actions[action], frame_repeat)
+        action = np.array([action])
+        action_vector = np.flip(((action[:, None] & (1 << np.arange(n_actions))) > 0).astype(int)).reshape(-1)
+        reward = game.make_action(action_vector, frame_repeat)
         s = game.get_state()
         if game.is_episode_finished():
             break
@@ -179,8 +181,8 @@ for i in range(episodes):
         reward = calculate_reward(reward, variables, _variabels, done)
 
         # TRAIN YOUR AGENT HERE
-        agent.store_transition(state, variables, action, reward, _state, _variabels, done)
-        agent.learn()
+        # agent.store_transition(state, variables, action, reward, _state, _variabels, done)
+        # agent.learn()
 
         # Check if player is dead
         if game.is_player_dead():

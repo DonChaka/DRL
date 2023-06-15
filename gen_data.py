@@ -37,7 +37,7 @@ test_episodes_per_epoch = 100
 
 # Other parameters
 frame_repeat = 4
-resolution = (1, 160, 120)
+resolution = (1, 256, 192)
 episodes_to_watch = 10
 
 
@@ -113,12 +113,13 @@ bots = 5
 
 # Run this many episodes
 episodes = 5  # 25_000
+n_steps = 15_000
 
 ### DEFINE YOUR AGENT HERE (or init)
 
-memory = ReplayBuffer(15_000, (1, resolution[1], resolution[2] * 3), 9, 16)
+memory = ReplayBuffer(n_steps, (1, resolution[1], resolution[2] * 3), 9, 16)
 
-filepath = 'framebuffer_action.pickle'
+filepath = 'new_framebuffer.pickle'
 # try:
 #     replay_memory = load_json(filepath)
 # except:
@@ -128,8 +129,8 @@ filepath = 'framebuffer_action.pickle'
 
 
 iteration = 0
-prog_bar = tqdm(total=15_000)
-while iteration < 15_000:
+prog_bar = tqdm(total=n_steps)
+while iteration < n_steps:
     state_stack = StateWrapper(resolution, game.get_state().game_variables.shape)
     state_stack(game.get_state().screen_buffer, game.get_state().game_variables)
     ### Add specific number of bots

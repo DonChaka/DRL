@@ -7,7 +7,6 @@ from numpy import ndarray
 
 
 class StateWrapper:
-    # contain last 3 frames to detect motion
     def __init__(self, resolution, state_shape):
         self.resolution = resolution
         self.state_shape = state_shape
@@ -20,7 +19,7 @@ class StateWrapper:
             self.add_frame(frame, state)
         return self.get_state()
 
-    def _preprocess(self, frame):
+    def _preprocess(self, frame: ndarray) -> ndarray:
         frame = skimage.color.rgb2gray(frame, channel_axis=0)
         frame = frame / 255.0
         frame = skimage.transform.resize(frame, self.resolution)
@@ -30,7 +29,7 @@ class StateWrapper:
     def get_state(self) -> tuple[ndarray, ndarray]:
         return np.concatenate(self.last_frames, axis=2), np.concatenate(self.last_stats, axis=0)
 
-    def add_frame(self, frame, state):
+    def add_frame(self, frame: ndarray, state: ndarray) -> None:
         self.last_frames.append(self._preprocess(frame))
         self.last_stats.append(state)
 

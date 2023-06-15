@@ -73,7 +73,7 @@ class DQN(nn.Module):
 
         self.flatten = nn.Flatten()
 
-        self.fc1 = nn.Linear(3632, 256)
+        self.fc1 = nn.Linear(1072, 256)
         self.fc2 = nn.Linear(256, 512)
         self.output = nn.Linear(512, n_actions)
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
@@ -114,7 +114,7 @@ class DDQNAgent:
         self.action_size = n_actions
         self.memory = ReplayBuffer(15_000, input_dims, n_actions, 16)
         self.gamma = 0.95  # discount rate
-        self.epsilon = 0  # exploration rate
+        self.epsilon = 1 # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.0005
         self.network_sync_rate = update_rate
@@ -142,8 +142,10 @@ class DDQNAgent:
         return action
 
     def get_best_action(self, state, variables):
-        state = T.tensor(state).to(self.q.device)
-        variables = T.tensor(variables, dtype=T.int16).to(self.q.device)
+        state = np.expand_dims(state, 0)
+        variables = np.expand_dims(variables, 0)
+        state = T.tensor(state, dtype=T.float32).to(self.q.device)
+        variables = T.tensor(variables, dtype=T.float32).to(self.q.device)
         actions = self.q.forward(state, variables)
         action = T.argmax(actions).item()
 
